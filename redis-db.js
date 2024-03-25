@@ -1,10 +1,8 @@
 const { createClient, commandOptions } = require("redis");
+const { levelVsKeys } = require("./constans");
 let client;
-const levelVsKeys = {
-  beginner: "beginner:room",
-  advanced: "advanced:room",
-  intermediate: "intermediate:room",
-};
+
+// redis connection config
 const connectToRedis = async () => {
   client = await createClient({
     url: process.env.REDIS_URL,
@@ -15,12 +13,7 @@ const connectToRedis = async () => {
     .connect();
 };
 
-const test = async () => {
-  await client.set("name", "ram1");
-  const value = await client.get("name");
-  console.log(value);
-  // await client.disconnect();
-};
+// read the data by using stream
 const streamRead = async (key, result) => {
   let response = await client.xRead(
     commandOptions({
@@ -29,17 +22,19 @@ const streamRead = async (key, result) => {
     [
       {
         key: key,
-        id: "0-0",
+        id: `0-0`,
       },
     ],
     {
       COUNT: 10,
     }
   );
-  console.log(response ? JSON.stringify(response) : null);
+//   console.log(response ? JSON.stringify(response) : null);
   result[key] = response ? JSON.stringify(response) : null;
-  return 
+  return;
 };
+
+// add data in stream
 const streamPush = async (args) => {
   try {
     const userKeyStatus = `${args.name}:${args.userId}:status`;
@@ -74,19 +69,17 @@ const userEndGame = async (userData) => {
   }
 };
 const fetchDataForRoom = async () => {
-  let arr = [];
-  let result = {}
-
+  let promiseArr = [];
+  let lobbyResult = {};
   for (let i of Object.values(levelVsKeys)) {
-    arr.push(streamRead(i, result));
+    promiseArr.push(streamRead(i, lobbyResult));
   }
-  await Promise.allSettled(arr);
-  console.log(result)
-  return result;
+  await Promise.allSettled(promiseArr);
+  console.log(lobbyResult);
+  return lobbyResult;
 };
 module.exports = {
   connectToRedis,
-  test,
   streamPush,
   createUser,
   userEndGame,
